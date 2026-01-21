@@ -1,0 +1,10 @@
+[package]
+name = "block-dn-client"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bitcoin = { version = "0.32.7" }
+bitreq = { version = "0.2.0", features = ["https", "json-using-serde"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0" }
