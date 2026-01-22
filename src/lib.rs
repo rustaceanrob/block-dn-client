@@ -1,44 +1,17 @@
 //! A Rust client for [`block-dn`](https://github.com/guggero/block-dn#).
 #![warn(missing_docs)]
-use core::fmt;
 use core::time::Duration;
 use std::{borrow::Cow, io::Cursor, net::SocketAddr};
 
 use bitcoin::{bip158::BlockFilter, block::Header, consensus::Decodable};
 use models::{Html, ServerStatus};
 
+/// Errors that may occur when querying.
+pub mod error;
 /// Data models for server queries and responses.
 pub mod models;
 
-/// Errors that may occur when querying a client.
-#[derive(Debug)]
-pub enum Error {
-    /// A consensus error was encodered when decoding the response.
-    Decoder(bitcoin::consensus::encode::Error),
-    /// Underlying HTTPs request failed.
-    Request(bitreq::Error),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::Decoder(e) => write!(f, "consensus error {e}"),
-            Error::Request(e) => write!(f, "request error {e}"),
-        }
-    }
-}
-
-impl From<bitreq::Error> for Error {
-    fn from(value: bitreq::Error) -> Self {
-        Self::Request(value)
-    }
-}
-
-impl From<bitcoin::consensus::encode::Error> for Error {
-    fn from(value: bitcoin::consensus::encode::Error) -> Self {
-        Self::Decoder(value)
-    }
-}
+use crate::error::Error;
 
 /// An endpoint for a `block-dn` server.
 #[derive(Debug, Clone)]
