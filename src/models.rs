@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use bitcoin::PublicKey;
 
@@ -41,7 +41,7 @@ pub struct TapTweaks {
     /// Number of blocks in the response, up to 2,000.
     pub num_blocks: u32,
     /// The tweaks for each block.
-    pub blocks: Vec<Option<HashMap<u32, String>>>,
+    pub blocks: Vec<Option<BTreeMap<u32, String>>>,
 }
 
 impl TapTweaks {
@@ -51,13 +51,13 @@ impl TapTweaks {
     /// # Panics
     ///
     /// If the partial secret is not a valid hex encoding of a public key.
-    pub fn fallible_into_iterator(self) -> impl Iterator<Item = Option<HashMap<u32, PublicKey>>> {
+    pub fn fallible_into_iterator(self) -> impl Iterator<Item = Option<BTreeMap<u32, PublicKey>>> {
         self.blocks.into_iter().map(|tweaks| {
             tweaks.map(|tweaks| {
                 tweaks
                     .into_iter()
                     .map(|(tx_index, pk_str)| (tx_index, pk_str.parse::<PublicKey>().unwrap()))
-                    .collect::<HashMap<u32, PublicKey>>()
+                    .collect::<BTreeMap<u32, PublicKey>>()
             })
         })
     }
