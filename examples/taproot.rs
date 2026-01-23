@@ -1,8 +1,9 @@
-use core::time::Duration;
 use std::time::Instant;
 
+use block_dn_client::Timeout;
+
 const ENDPOINT: block_dn_client::Endpoint<'static> = block_dn_client::Endpoint::BLOCK_DN_ORG;
-const TIMEOUT: Duration = Duration::from_secs(5);
+const TIMEOUT: Timeout = Timeout::from_seconds(5);
 const TAPROOT_ACTIVATION_HEIGHT: u32 = 700_000;
 
 fn main() {

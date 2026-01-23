@@ -1,4 +1,4 @@
-use block_dn_client::{Builder, Client};
+use block_dn_client::{Builder, Client, Timeout};
 
 fn default_client() -> Client<'static> {
     Builder::default().build()
@@ -31,9 +31,7 @@ fn test_filters() {
 
 #[test]
 fn test_tap_tweaks() {
-    let client = Builder::new()
-        .timeout(core::time::Duration::from_secs(10))
-        .build();
+    let client = Builder::new().timeout(Timeout::from_seconds(10)).build();
     let tweaks = client.tweaks(900_000).unwrap();
     assert!(!tweaks.blocks.is_empty());
     let _ = tweaks.fallible_into_iterator();

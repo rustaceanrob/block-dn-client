@@ -1,6 +1,5 @@
 //! A Rust client for [`block-dn`](https://github.com/guggero/block-dn#).
 #![warn(missing_docs)]
-use core::time::Duration;
 use std::{borrow::Cow, io::Cursor, net::SocketAddr};
 
 use bitcoin::{Block, BlockHash, bip158::BlockFilter, block::Header, consensus::Decodable};
@@ -42,11 +41,28 @@ impl<'e> Endpoint<'e> {
     }
 }
 
+/// The response timeout permitted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Timeout(u64);
+
+impl Timeout {
+    /// Build a timeout from number of seconds.
+    pub const fn from_seconds(seconds: u64) -> Self {
+        Self(seconds)
+    }
+}
+
+impl Default for Timeout {
+    fn default() -> Self {
+        Self(1)
+    }
+}
+
 /// Build a new client to query data for.
 #[derive(Debug)]
 pub struct Builder<'e> {
     endpoint: Endpoint<'e>,
-    timeout: Duration,
+    timeout: Timeout,
 }
 
 impl<'e> Builder<'e> {
@@ -54,12 +70,12 @@ impl<'e> Builder<'e> {
     pub fn new() -> Self {
         Self {
             endpoint: Endpoint::BLOCK_DN_ORG,
-            timeout: Duration::from_secs(1),
+            timeout: Timeout::default(),
         }
     }
 
     /// Set the timeout the server has to respond.
-    pub fn timeout(mut self, timeout: Duration) -> Self {
+    pub fn timeout(mut self, timeout: Timeout) -> Self {
         self.timeout = timeout;
         self
     }
@@ -89,7 +105,7 @@ impl<'e> Default for Builder<'e> {
 #[derive(Debug)]
 pub struct Client<'e> {
     endpoint: Endpoint<'e>,
-    timeout: Duration,
+    timeout: Timeout,
 }
 
 impl<'e> Client<'e> {
@@ -97,7 +113,7 @@ impl<'e> Client<'e> {
     /// Return the root HTML of the server.
     pub fn index_html(&self) -> Result<Html, Error> {
         let response = bitreq::get(self.endpoint.0.to_string())
-            .with_timeout(self.timeout.as_secs())
+            .with_timeout(self.timeout.0)
             .send()?;
         let html = response.as_str()?;
         Ok(Html(html.to_string()))
@@ -106,7 +122,7 @@ impl<'e> Client<'e> {
     /// Get the status of the server. See [`ServerStatus`] for the response structure.
     pub fn status(&self) -> Result<ServerStatus, Error> {
         let status = bitreq::get(self.endpoint.append_route("status"))
-            .with_timeout(self.timeout.as_secs())
+            .with_timeout(self.timeout.0)
             .send()?;
         Ok(status.json::<ServerStatus>()?)
     }
@@ -116,9 +132,7 @@ impl<'e> Client<'e> {
         let route = self
             .endpoint
             .append_route(format!("headers/{start_height}"));
-        let response = bitreq::get(route)
-            .with_timeout(self.timeout.as_secs())
-            .send()?;
+        let response = bitreq::get(route).with_timeout(self.timeout.0).send()?;
         let mut headers = Vec::with_capacity(Self::EXPECTED_HEADER_LIST_SIZE * 80);
         for chunk in response.as_bytes().chunks_exact(80) {
             headers.push(bitcoin::consensus::deserialize::<Header>(chunk)?);
@@ -131,9 +145,7 @@ impl<'e> Client<'e> {
         let route = self
             .endpoint
             .append_route(format!("filters/{start_height}"));
-        let response = bitreq::get(route)
-            .with_timeout(self.timeout.as_secs())
-            .send()?;
+        let response = bitreq::get(route).with_timeout(self.timeout.0).send()?;
         let mut cursor = Cursor::new(response.into_bytes());
         let mut filters = Vec::new();
         while let Ok(bytes) = Vec::<u8>::consensus_decode_from_finite_reader(&mut cursor) {
@@ -147,18 +159,14 @@ impl<'e> Client<'e> {
         let route = self
             .endpoint
             .append_route(format!("sp/tweak-data/{start_height}"));
-        let response = bitreq::get(route)
-            .with_timeout(self.timeout.as_secs())
-            .send()?;
+        let response = bitreq::get(route).with_timeout(self.timeout.0).send()?;
         Ok(response.json::<TapTweaks>()?)
     }
 
     /// Fetch the block by its hash.
     pub fn block(&self, block_hash: BlockHash) -> Result<Block, Error> {
         let route = self.endpoint.append_route(format!("block/{block_hash}"));
-        let response = bitreq::get(route)
-            .with_timeout(self.timeout.as_secs())
-            .send()?;
+        let response = bitreq::get(route).with_timeout(self.timeout.0).send()?;
         let block = bitcoin::consensus::deserialize::<Block>(response.as_bytes())?;
         Ok(block)
     }
