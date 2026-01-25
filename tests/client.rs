@@ -1,4 +1,4 @@
-use block_dn_client::{Builder, Client, Timeout};
+use block_dn_client::{Builder, Client, Endpoint, Timeout};
 
 fn default_client() -> Client<'static> {
     Builder::default().build()
@@ -49,4 +49,10 @@ fn test_block() {
             )
             .is_ok()
     )
+}
+
+#[test]
+fn test_estimate_fee() {
+    let client = Builder::new().endpoint(Endpoint::DEV_2140).build();
+    assert!(client.estimate_smart_fee(1).is_ok());
 }

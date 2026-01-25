@@ -2,7 +2,9 @@
 #![warn(missing_docs)]
 use std::{borrow::Cow, io::Cursor, net::SocketAddr};
 
-use bitcoin::{Block, BlockHash, bip158::BlockFilter, block::Header, consensus::Decodable};
+use bitcoin::{
+    Block, BlockHash, FeeRate, bip158::BlockFilter, block::Header, consensus::Decodable,
+};
 use models::{Html, ServerStatus, TapTweaks};
 
 /// Errors that may occur when querying.
@@ -19,8 +21,8 @@ pub struct Endpoint<'e>(Cow<'e, str>);
 impl<'e> Endpoint<'e> {
     /// The original `block-dn` server hosted at `block-dn.org`.
     pub const BLOCK_DN_ORG: Self = Self(Cow::Borrowed("https://block-dn.org"));
-    // Taproot-specific filters hosted by `2140.dev`.
-    // pub const TAPROOT_DN: Self = Self(Cow::Borrowed("https://taprootdn.xyz"));
+    /// Server with additional capabilities hosted by `2140.dev`.
+    pub const DEV_2140: Self = Self(Cow::Borrowed("https://taprootdn.xyz"));
     /// Local host at port 8080.
     pub const LOCAL_HOST: Self = Self(Cow::Borrowed("https://127.0.0.1:8080"));
 
@@ -169,6 +171,23 @@ impl<'e> Client<'e> {
         let response = bitreq::get(route).with_timeout(self.timeout.0).send()?;
         let block = bitcoin::consensus::deserialize::<Block>(response.as_bytes())?;
         Ok(block)
+    }
+
+    /// Get the fee rate estimated for inclusion in the target block. Only available on
+    /// [`Endpoint::DEV_2140`].
+    pub fn estimate_smart_fee(&self, conf_target: u32) -> Result<FeeRate, Error> {
+        let route = self
+            .endpoint
+            .append_route(format!("fees/estimate-fee/{conf_target}"));
+        let response = bitreq::get(route).with_timeout(self.timeout.0).send()?;
+        let sats_vb: [u8; 8] = response.as_bytes().try_into().map_err(|_| {
+            Error::Decoder(bitcoin::consensus::encode::Error::ParseFailed(
+                "cannot fit response into 8 byte little endian.",
+            ))
+        })?;
+        Ok(FeeRate::from_sat_per_vb_unchecked(u64::from_le_bytes(
+            sats_vb,
+        )))
     }
 }
 
